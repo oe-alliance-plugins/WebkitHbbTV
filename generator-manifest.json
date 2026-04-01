@@ -1,0 +1,18 @@
+{
+  "branch": "main",
+  "depends_recipe": "",
+  "description_control": "",
+  "description_recipe": "E2 HbbTV Plugin",
+  "history_source_dir": "WebkitHbbTV",
+  "internal_package_name": "enigma2-plugin-extensions-webkithbbtv",
+  "module_dir_name": "WebkitHbbTV",
+  "output_subdir": "WebkitHbbTV",
+  "package_name": "enigma2-plugin-extensions-webkithbbtv",
+  "plugin_src_rel": "WebkitHbbTV",
+  "python_package": "WebkitHbbTV",
+  "rdepends_recipe": "vuplus-webkithbbtv-dumpait webkit-hbbtv-browser libupnp1.6",
+  "replaces": "",
+  "repo_name": "WebkitHbbTV",
+  "rrecommends": "",
+  "rreplaces": ""
+}
