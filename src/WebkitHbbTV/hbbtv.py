@@ -4,11 +4,9 @@ from Screens.Screen import Screen
 from enigma import eTimer
 
 import os
-import struct
 
 from .__init__ import _
 from . import vbcfg
-from .vbipc import VBController
 
 
 class HbbTVWindow(Screen):

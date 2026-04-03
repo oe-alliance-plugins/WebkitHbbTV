@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import os
 import threading
-import time
 import socket
 import select
 import struct
@@ -14,7 +13,7 @@ _BUFSIZE = 4096
 def SetHandler(opcode, handler):
 	try:
 		_OPCODE[opcode][1] = handler
-	except:
+	except Exception:
 		vbcfg.ERR("Fail to set handler (unknown opcode): %s" % opcode)
 		return False
 	return True
@@ -31,7 +30,7 @@ def GetHandler(opcode):
 def GetOpcode(opcode):
 	try:
 		return _OPCODE[opcode][0]
-	except:
+	except Exception:
 		return -1
 
 
@@ -78,7 +77,7 @@ class VBServerThread(threading.Thread):
 
 		try:
 			os.unlink(addr)
-		except:
+		except OSError:
 			if os.path.exists(addr):
 				return False
 		try:
@@ -86,7 +85,7 @@ class VBServerThread(threading.Thread):
 			self.mSock.settimeout(self.mTimeout)
 			self.mSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			self.mSock.bind(addr)
-		except:
+		except Exception:
 			return False
 		return True
 
@@ -147,7 +146,7 @@ class VBServerThread(threading.Thread):
 		addr = vbcfg.SOCKETFILE
 		try:
 			os.unlink(addr)
-		except:
+		except OSError:
 			pass
 
 
@@ -172,6 +171,6 @@ class VBHandlers:
 				vbcfg.DEBUG("registrated at %s" % opcodestr)
 				SetHandler(opcodestr, fref)
 				registreted_idx += 1
-			except:
+			except Exception:
 				pass
 		vbcfg.DEBUG("%d registreated" % registreted_idx)
