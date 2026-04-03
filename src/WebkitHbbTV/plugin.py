@@ -249,7 +249,7 @@ class VBMain(Screen):
 		try:
 			from Screens.InfoBarGenerics import gHbbtvApplication
 			self.m_vuplus = gHbbtvApplication.getUseAit()
-		except:
+		except ImportError:
 			self.m_vuplus = False
 
 	def _cb_register_infobar(self):
@@ -326,7 +326,7 @@ class VBMain(Screen):
 
 				try:
 					self._applicationList = reader.getApplicationList()
-				except:
+				except Exception:
 					pass
 
 		if self._applicationList is not None:
@@ -341,7 +341,7 @@ def auto_start_main(reason, **kwargs):
 		try:
 			if vbcfg.g_main.vbserver is not None:
 				vbcfg.g_main.vbserver.kill()
-		except:
+		except Exception:
 			pass
 
 
