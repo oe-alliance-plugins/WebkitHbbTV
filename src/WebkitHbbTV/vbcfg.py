@@ -101,7 +101,7 @@ def set_bgcolor(val):
 
 
 # for debug True
-#g_debug = True
+# g_debug = True
 g_debug = False
 
 

@@ -320,7 +320,7 @@ class VBMain(Screen):
 				reader = eAITSectionReader(demux, pmtid, sid)
 				if reader.doOpen(info, self.m_vuplus):
 					reader.doParseApplications()
-					#reader.doDump()
+					# reader.doDump()
 				else:
 					vbcfg.ERR("no AIT")
 
