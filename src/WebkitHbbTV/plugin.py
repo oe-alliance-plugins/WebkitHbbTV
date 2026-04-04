@@ -16,7 +16,10 @@ from . import vbcfg
 from .hbbtv import HbbTVWindow
 from .vbipc import VBController, VBServerThread, VBHandlers
 
-strIsEmpty = lambda x: x is None or len(x) == 0
+
+def strIsEmpty(x):
+	return x is None or len(x) == 0
+
 
 vbcfg.SOCKETFILE = '/tmp/.browser.support'
 vbcfg.CONTROLFILE = '/tmp/.browser.controller'
