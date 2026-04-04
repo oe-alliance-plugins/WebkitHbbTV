@@ -355,8 +355,8 @@ def extension_start_application(session, **kwargs):
 
 
 def Plugins(**kwargs):
-	l = []
-	l.append(PluginDescriptor(where=PluginDescriptor.WHERE_AUTOSTART, fnc=auto_start_main))
-	l.append(PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, needsRestart=True, fnc=session_start_main, weight=-10))
-	l.append(PluginDescriptor(name=_("HbbTV Applications"), where=PluginDescriptor.WHERE_EXTENSIONSMENU, needsRestart=True, fnc=extension_start_application))
-	return l
+	items = []
+	items.append(PluginDescriptor(where=PluginDescriptor.WHERE_AUTOSTART, fnc=auto_start_main))
+	items.append(PluginDescriptor(where=PluginDescriptor.WHERE_SESSIONSTART, needsRestart=True, fnc=session_start_main, weight=-10))
+	items.append(PluginDescriptor(name=_("HbbTV Applications"), where=PluginDescriptor.WHERE_EXTENSIONSMENU, needsRestart=True, fnc=extension_start_application))
+	return items

@@ -60,17 +60,17 @@ class eAITSectionReader:
 		return item
 
 	def doParseApplications(self):
-		l = []
+		items = []
 
 		if self.mVuplusBox:
 			for application in self.mInfo.getInfoObject(iServiceInformation.sHBBTVUrl):
 				item = self.__application(application)
-				l.append(item)
+				items.append(item)
 		else:
 			for application in self.mDocument.getElementsByTagName("application"):
 				item = self.__application(application)
-				l.append(item)
-		self.mAppList = l
+				items.append(item)
+		self.mAppList = items
 
 	def getApplicationList(self):
 		return self.mAppList
