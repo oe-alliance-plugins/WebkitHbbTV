@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-04-16 19:01+0430\n"
+"POT-Creation-Date: 2026-04-08 10:12+0200\n"
 "PO-Revision-Date: 2022-11-05 07:54+0100\n"
 "Last-Translator: Massimo Pissarello <mapi68@gmail.com>\n"
 "Language-Team: Italian <>\n"
@@ -20,14 +20,18 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Lokalize 22.08.2\n"
 
+#: ../plugin.py:364
 msgid "HbbTV Applications"
 msgstr "Applicazioni HbbTV"
 
+#: ../hbbtv.py:55
 msgid "HbbTV Plugin"
 msgstr "Plugin HbbTV"
 
+#: ../plugin.py:294
 msgid "No detected HbbTV applications."
 msgstr "Nessuna applicazione HbbTV rilevata."
 
+#: ../plugin.py:295
 msgid "Please choose an HbbTV application."
 msgstr "Scegli un'applicazione HbbTV."
