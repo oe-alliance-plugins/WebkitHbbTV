@@ -1,9 +1,11 @@
 from __future__ import absolute_import
-import os
-import threading
-import socket
-import select
-import struct
+from os import O_WRONLY, close, open as openFd, unlink, write
+from os.path import exists
+from select import select
+from socket import AF_UNIX, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, socket
+from struct import calcsize, pack, unpack
+from threading import Thread
+
 from . import vbcfg
 
 _OPCODE = {}
@@ -38,35 +40,33 @@ class VBController:
 	@staticmethod
 	def assamble(opcodestr, data):
 		opcode = _OPCODE[opcodestr][0]
-		header = struct.pack('i', opcode)
+		header = pack('i', opcode)
 		return header + data
 
 	@staticmethod
-	def command(opcodestr, data=""):
+	def command(opcodestr, data=b""):
 		cmd_fd = None
 		vbcfg.DEBUG("send ipc: [%s]" % opcodestr)
 		try:
 			send_data = VBController.assamble(opcodestr, data)
-			if not os.path.exists(vbcfg.CONTROLFILE):
+			if not exists(vbcfg.CONTROLFILE):
 				raise Exception("no found controller file.")
-			cmd_fd = os.open(vbcfg.CONTROLFILE, os.O_WRONLY)
+			cmd_fd = openFd(vbcfg.CONTROLFILE, O_WRONLY)
 			if cmd_fd is None:
 				raise Exception("fail to open controller file.")
-			os.write(cmd_fd, send_data)
+			write(cmd_fd, send_data)
 		except Exception as err:
 			vbcfg.ERR("VBHController: %s" % err)
-			vbcfg.setPosition(vbcfg.g_position)
-			vbcfg.osd_unlock()
 			return False
 		finally:
 			if cmd_fd is not None:
-				os.close(cmd_fd)
+				close(cmd_fd)
 		return True
 
 
-class VBServerThread(threading.Thread):
+class VBServerThread(Thread):
 	def __init__(self):
-		threading.Thread.__init__(self)
+		Thread.__init__(self)
 		self.mSock = None
 		self.mFlag = False
 		self.mTimeout = 5
@@ -76,23 +76,23 @@ class VBServerThread(threading.Thread):
 		self.mTimeout = timeout
 
 		try:
-			os.unlink(addr)
+			unlink(addr)
 		except OSError:
-			if os.path.exists(addr):
+			if exists(addr):
 				return False
 		try:
-			self.mSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+			self.mSock = socket(AF_UNIX, SOCK_STREAM)
 			self.mSock.settimeout(self.mTimeout)
-			self.mSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			self.mSock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 			self.mSock.bind(addr)
 		except Exception:
 			return False
 		return True
 
 	def parse(self, data):
-		hlen = struct.calcsize('ibi')
+		hlen = calcsize('ibi')
 		packet = ""
-		opcode, result, length = struct.unpack('ibi', data[:hlen])
+		opcode, result, length = unpack('ibi', data[:hlen])
 		vbcfg.DEBUG("%s %s %d" % (opcode, result, length))
 		if length > 0:
 			packet = data[hlen:hlen + length]
@@ -101,7 +101,7 @@ class VBServerThread(threading.Thread):
 	def assamble(self, opcode, result, packet):
 		if packet is None:
 			packet = ""
-		header = struct.pack('ibi', opcode, (result and 1 or 0), len(packet))
+		header = pack('ibi', opcode, (result and 1 or 0), len(packet))
 		if isinstance(packet, str):
 			return header + bytes(packet, 'utf-8', errors='ignore')
 		else:
@@ -127,7 +127,7 @@ class VBServerThread(threading.Thread):
 		self.mFlag = True
 		self.mSock.listen(1)
 		while self.mFlag:
-			readable, writable, errored = select.select([self.mSock], [], [], self.mTimeout)
+			readable, writable, errored = select([self.mSock], [], [], self.mTimeout)
 			for s in readable:
 				if s is self.mSock:
 					conn, addr = None, None
@@ -145,7 +145,7 @@ class VBServerThread(threading.Thread):
 		self.mFlag = False
 		addr = vbcfg.SOCKETFILE
 		try:
-			os.unlink(addr)
+			unlink(addr)
 		except OSError:
 			pass
 

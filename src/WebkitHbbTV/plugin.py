@@ -1,20 +1,22 @@
 from __future__ import absolute_import
-from Plugins.Plugin import PluginDescriptor
-from Screens.Screen import Screen
-from Screens.InfoBar import InfoBar
-from Screens.ChoiceBox import ChoiceBox
-from Screens.VirtualKeyBoard import VirtualKeyBoard
+from collections import deque
+from functools import partial
+from struct import pack
+from time import localtime
+
+from enigma import eDVBVolumecontrol, ePythonMessagePump, eTimer, getDesktop, iPlayableService, iServiceInformation
+
 from Components.ServiceEventTracker import ServiceEventTracker
+from Plugins.Plugin import PluginDescriptor
+from Screens.ChoiceBox import ChoiceBox
+from Screens.InfoBar import InfoBar
+from Screens.Screen import Screen
+from Screens.VirtualKeyBoard import VirtualKeyBoard
 
-from enigma import eTimer, iServiceInformation, iPlayableService, eDVBVolumecontrol
-
-import struct
-import time
-
-from .__init__ import _
 from . import vbcfg
+from .__init__ import _
 from .hbbtv import HbbTVWindow
-from .vbipc import VBController, VBServerThread, VBHandlers
+from .vbipc import VBController, VBHandlers, VBServerThread
 
 
 def strIsEmpty(x):
@@ -60,6 +62,10 @@ _OPCODE_LIST = [
 class VBHandler(VBHandlers):
 	def __init__(self, session):
 		self._session = session
+		self.dialogRequests = deque()
+		self.dialogPump = ePythonMessagePump()
+		signal = self.dialogPump.recv_msg
+		(signal.get() if hasattr(signal, "get") else signal).append(self.openBrowserDialog)
 		self.current_title = None
 		self.max_volume = -1
 		self.soft_volume = -1
@@ -100,12 +106,17 @@ class VBHandler(VBHandlers):
 		else:
 			eDVBVolumecontrol.getInstance().setVolume(self.max_volume, self.max_volume)
 
-	def close_vkb(self, data=""):
-		vbcfg.osd_lock()
-
-		if strIsEmpty(data):
-			data = ""
-		VBController.command("BROWSER_VKB_CLOSE", data)
+	def close_vkb(self, data="", browser=None):
+		if browser is None:
+			browser = vbcfg.g_browser
+		if not getattr(browser, "is_browser_opened", False):
+			return
+		if not vbcfg.osd_lock(browser):
+			browser._cb_close_window()
+			return
+		if not VBController.command("BROWSER_VKB_CLOSE", (data or "").encode("utf-8")):
+			vbcfg.osd_unlock(browser)
+			browser._cb_close_window()
 
 	def _CB_CONTROL_EXIT(self, result, packet):
 		if self.onCloseCB:
@@ -143,12 +154,10 @@ class VBHandler(VBHandlers):
 
 	def _CB_CONTROL_INVALIDATE(self, result, packet):
 		# redraw enigma
-		from enigma import getDesktop
 		getDesktop(0).paint()
 		return (True, None)
 
 	def _CB_CONTROL_GET_FBSIZE(self, result, packet):
-		from enigma import getDesktop
 		desktop_size = getDesktop(0).size()
 		data = "%dx%d" % (desktop_size.width(), desktop_size.height())
 		return (True, data)
@@ -172,22 +181,31 @@ class VBHandler(VBHandlers):
 		self.set_volume(-5)
 		return (True, None)
 
-	def _CB_BROWSER_VKB_OPEN(self, result, packet):
-		if vbcfg.g_browser and vbcfg.g_browser.is_browser_opened:
-			vbcfg.setPosition(vbcfg.g_position)
-			vbcfg.osd_unlock()
-
-			if strIsEmpty(packet):
-				packet = ""
-			self._session.openWithCallback(self.close_vkb, VirtualKeyBoard, title=("Please enter URL here"), text=str(packet))
+	def queueBrowserDialog(self, packet, keyboard):
+		# IPC runs on a socket thread. Hand the renderer and dialogs back on the GUI thread.
+		browser = vbcfg.g_browser
+		if browser is not None and getattr(browser, "is_browser_opened", False):
+			self.dialogRequests.append((browser, packet, self.current_title))
+			self.dialogPump.send(int(keyboard))
 		return (True, None)
+
+	def openBrowserDialog(self, keyboard):
+		browser, packet, title = self.dialogRequests.popleft()
+		if not getattr(browser, "is_browser_opened", False) or not vbcfg.osd_unlock(browser):
+			return
+		if keyboard:
+			value = packet.decode("utf-8", "replace") if isinstance(packet, bytes) else packet or ""
+			self._session.openWithCallback(partial(self.close_vkb, browser=browser), VirtualKeyBoard, title=_("Please enter URL here"), text=value)
+
+	def _CB_BROWSER_VKB_OPEN(self, result, packet):
+		return self.queueBrowserDialog(packet, True)
 
 	def _CB_OOIF_GET_CURRENT_CHANNEL(self, result, packet):
 		appinfo = vbcfg.g_main.get_autostart_application()
 		orgid = appinfo and appinfo["orgid"]
 		if (vbcfg.g_channel_info):
 			try:
-				data = struct.pack('iiiii', int(orgid), vbcfg.g_channel_info[0], vbcfg.g_channel_info[1], vbcfg.g_channel_info[2], len(vbcfg.g_channel_info[3])) + bytes(vbcfg.g_channel_info[3], 'utf-8')
+				data = pack('iiiii', int(orgid), vbcfg.g_channel_info[0], vbcfg.g_channel_info[1], vbcfg.g_channel_info[2], len(vbcfg.g_channel_info[3])) + bytes(vbcfg.g_channel_info[3], 'utf-8')
 			except Exception as err:
 				vbcfg.ERR(err)
 				return (False, None)
@@ -214,11 +232,11 @@ class VBHandler(VBHandlers):
 
 	def _CB_GET_TIME_OFFSET(self, result, packet):
 
-		time_struct = time.localtime()
+		time_struct = localtime()
 		offset = (time_struct.tm_hour * 3600) + (time_struct.tm_min * 60) + time_struct.tm_sec
 
 		try:
-			data = struct.pack('i', int(offset))
+			data = pack('i', int(offset))
 		except Exception as err:
 			vbcfg.ERR(err)
 			return (False, None)
